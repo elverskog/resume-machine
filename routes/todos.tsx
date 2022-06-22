@@ -52,6 +52,11 @@ export const data: Data<Store, Store> = {
 };
 
 export default function Todos() {
+
+
+  const hmmm = useData<Store>();  
+  console.log("hmmm", hmmm);
+  
   const { data: { todos }, isMutating, mutation } = useData<Store>();
 
   return (

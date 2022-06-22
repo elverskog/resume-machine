@@ -1,6 +1,4 @@
-import { } from "aleph/react";
-import { useEffect } from "react"
-
+import { useData } from "aleph/react";
 import PouchDB from "pouchdb";
 
 let db: PouchDB.Database<{}> | undefined;
@@ -11,8 +9,107 @@ if ("Deno" in window) {
   db = undefined;
 }
 
+type Resume = {
+  id: number;
+  name: string;
+  message: string;
+  order: number;
+};
+
+type Store = {
+  resumes: Resume[];
+};
+
+//console.log("type of result", result.constructor.name);
+
+// const store: Store = {
+//   resumes: await db?.allDocs({
+//       include_docs: true,
+//       attachments: true
+//     }).then((result: Store) => {
+//       //console.log("result", result);
+//       return result
+//     })
+//       .catch((err: any) => console.log(err))
+// };
+
+const resumes = (
+  await db?.allDocs({
+    include_docs: true,
+    attachments: true
+  }).then((result: Store) => {
+    //console.log("result", result);
+    return result.rows;
+  })
+    .catch((err: any) => console.log(err))
+)
+
+  
+const store: Store = {
+  resumes: resumes || []
+}
+
+console.log("store", store);
+
+// const store: Store = ( 
+//   await db?.allDocs({
+//       include_docs: true,
+//       attachments: true
+//     }).then((result: Store) => {
+//       //console.log("result", result);
+//       return result.rows;
+//     })
+//       .catch((err: any) => console.log(err))
+// );
+
+//console.log("STORE", store);
+
+export const data: Data<Store, Store> = {
+  cacheTtl: 0, // no cache
+  get: () => {
+    return store;
+  },
+  put: async (req) => {
+    const { message } = await req.json();
+    if (typeof message === "string") {
+      store.todos.push({ id: Date.now(), message, completed: false });
+      window.localStorage?.setItem("todos", JSON.stringify(store.todos));
+    }
+    return store;
+  },
+  patch: async (req) => {
+    const { id, message, completed } = await req.json();
+    const todo = store.todos.find((todo) => todo.id === id);
+    if (todo) {
+      if (typeof message === "string") {
+        todo.message = message;
+      }
+      if (typeof completed === "boolean") {
+        todo.completed = completed;
+      }
+      window.localStorage?.setItem("todos", JSON.stringify(store.todos));
+    }
+    return store;
+  },
+  delete: async (req) => {
+    const { id } = await req.json();
+    if (id) {
+      store.todos = store.todos.filter((todo) => todo.id !== id);
+      window.localStorage?.setItem("todos", JSON.stringify(store.todos));
+    }
+    return store;
+  },
+};
+
 export default function Test() {
 
+
+
+  //const { data: { resumes }, isMutating, mutation } = useData<Store>();
+  // console.log("resumes", resumes);
+
+  const hmmm = useData<Store>();  
+  console.log("hmmm", hmmm);
 
   //useEffect(() => {
 
@@ -20,14 +117,14 @@ export default function Test() {
 
    
 
-    async function addItem() {
-      if(!db) return;
-      const doc = { hello: "world" };
-      const result = await db.post(doc);
-      console.log("result!!!", result);
-    }
+    // async function addItem() {
+    //   if(!db) return;
+    //   const doc = { hello: "world" };
+    //   const result = await db.post(doc);
+    //   console.log("result!!!", result);
+    // }
 
-    addItem();
+    // addItem();
 
   //})
 
@@ -76,9 +173,9 @@ export default function Test() {
     // console.log("docs", docs);
   //}
 
-  async function getDoc() {
+  //async function getDoc() {
 
-  }
+  //}
 
   return (
     <div className="screen e404">
