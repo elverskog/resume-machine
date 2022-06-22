@@ -1,0 +1,30 @@
+#editor/IDE specific
+/.idea
+/.vscode
+#/.editorconfig
+
+## testing
+/coverage/
+
+## temp folders
+/.tmp/
+
+# build
+/_site/
+/dist/
+/out-tsc/
+/build/
+
+storybook-static
+custom-elements.json
+
+# notes
+/notes
+
+## system files
+.DS_Store
+Thumbs.db
+
+*.swp
+*.swo
+*.log
