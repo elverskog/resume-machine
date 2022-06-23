@@ -1,4 +1,4 @@
-import { useData } from "aleph/react";
+import { Head, useData } from "aleph/react";
 import PouchDB from "pouchdb";
 
 let db: PouchDB.Database<{}> | undefined;
@@ -10,72 +10,50 @@ if ("Deno" in window) {
 }
 
 type Resume = {
-  id: number;
+  _id: string;
+  key: string;
   name: string;
-  message: string;
-  order: number;
 };
 
 type Store = {
   resumes: Resume[];
 };
 
-//console.log("type of result", result.constructor.name);
-
-// const store: Store = {
-//   resumes: await db?.allDocs({
-//       include_docs: true,
-//       attachments: true
-//     }).then((result: Store) => {
-//       //console.log("result", result);
-//       return result
-//     })
-//       .catch((err: any) => console.log(err))
-// };
-
 const resumes = (
   await db?.allDocs({
     include_docs: true,
     attachments: true
   }).then((result: Store) => {
-    //console.log("result", result);
     return result.rows;
-  })
-    .catch((err: any) => console.log(err))
+  }).catch((err: any) => console.log(err))
 )
 
-  
+
 const store: Store = {
   resumes: resumes || []
 }
 
-console.log("store", store);
-
-// const store: Store = ( 
-//   await db?.allDocs({
-//       include_docs: true,
-//       attachments: true
-//     }).then((result: Store) => {
-//       //console.log("result", result);
-//       return result.rows;
-//     })
-//       .catch((err: any) => console.log(err))
-// );
-
-//console.log("STORE", store);
-
 export const data: Data<Store, Store> = {
   cacheTtl: 0, // no cache
   get: () => {
+    //console.log("store", store);
     return store;
   },
   put: async (req) => {
-    const { message } = await req.json();
-    if (typeof message === "string") {
-      store.todos.push({ id: Date.now(), message, completed: false });
-      window.localStorage?.setItem("todos", JSON.stringify(store.todos));
+    const { name } = await req.json();
+    if (typeof name === "string") {
+      return db?.put({ _id: new Date().toJSON(), key: new Date().toJSON(), name })
+        .then((response: Store) => {
+          return db?.allDocs({
+            include_docs: true,
+            attachments: true
+          }).then((result: Store) => {
+            return { resumes: result.rows };
+          }).catch((err: any) => console.log(err))
+        }).catch(function (err: any) {
+          console.log(err);
+        })
     }
-    return store;
   },
   patch: async (req) => {
     const { id, message, completed } = await req.json();
@@ -101,90 +79,59 @@ export const data: Data<Store, Store> = {
   },
 };
 
+
 export default function Test() {
 
-
-
-  //const { data: { resumes }, isMutating, mutation } = useData<Store>();
-  // console.log("resumes", resumes);
-
-  const hmmm = useData<Store>();  
-  console.log("hmmm", hmmm);
-
-  //useEffect(() => {
-
-    //console.log('db', db);
-
-   
-
-    // async function addItem() {
-    //   if(!db) return;
-    //   const doc = { hello: "world" };
-    //   const result = await db.post(doc);
-    //   console.log("result!!!", result);
-    // }
-
-    // addItem();
-
-  //})
-
-
-  // const doc = { hello: "world" };
-  // const result = await db.post(doc);
-  // console.log("type", typeof(db));
-  // console.log("result", result);
-
-  // console.log(query.id)
-
-  // useEffect(() => {
-    
-  //   if(!isReady) return
-
-  //   async function getProducts() {
-  //     // add your Realm App Id to the .env.local file
-  //     const REALM_APP_ID = process.env.NEXT_PUBLIC_REALM_APP_ID
-  //     const app = new Realm.App({ id: REALM_APP_ID })
-  //     const credentials = Realm.Credentials.anonymous()
-  //     try {
-  //       const user = await app.logIn(credentials);
-  //       const oneProduct = await user.functions.getOneProduct(query.id)
-  //       setProduct(() => oneProduct)
-  //     } catch (error) {
-  //       console.error(error)
-  //     }
-  //   }
-
-  //   getProducts()        
-
-  // }, [isReady, query])
-
-//Use the 'idb' afapter for IndexedDB and persistence to disk.
-  //const checkDB = () => {
-
-
-    // console.log("result", result);
-
-    // const getDoc = await db.get(result.id);
-
-    // console.log("getDoc", getDoc);
-
-    // const docs = await db.allDocs();
-
-    // console.log("docs", docs);
-  //}
-
-  //async function getDoc() {
-
-  //}
+  const { data: { resumes }, isMutating, mutation } = useData<Store>();
+  //console.log("Test > resumes", resumes);
 
   return (
-    <div className="screen e404">
-    <h2>
-      Just a test baby.
-    </h2>
-    <p>
-      Bloopity blorp bleep??!!
-    </p>
-  </div>
+    <div className="todos-app">
+      <Head>
+        <title>Resumes</title>
+        <meta name="description" content="A resume builder" />
+      </Head>
+      <h1>
+        Resumes
+      </h1>
+      <ul>
+        {resumes.map((resume) => (
+          <li key={resume.key}>{ resume.doc && resume.doc.name ? resume.doc.name : 'no-name' } - {resume.id}</li>
+        ))}
+      </ul>
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const form = e.currentTarget;
+          const fd = new FormData(form);
+          const name = fd.get("message")?.toString().trim();
+          if (name) {
+            await mutation.put({ name }, {
+              //optimistic update data without waiting for the server response
+              optimisticUpdate: (data) => {
+                return {
+                  resumes: [...data.resumes, { _id: new Date().toJSON(), key: new Date().toJSON(), name }],
+                };
+              },
+              //replace the data with the new data that is from the server response
+              replace: true,
+            });
+            form.reset();
+            setTimeout(() => {
+              form.querySelector("input")?.focus();
+            }, 0);
+          }
+        }}
+      >
+        <input
+          type="text"
+          name="message"
+          placeholder="Resume Name"
+          autoFocus
+          autoComplete="off"
+          disabled={!!isMutating}
+        />
+      </form>
+    </div>
   );
 }
