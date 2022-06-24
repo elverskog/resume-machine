@@ -21,14 +21,10 @@ function IDBDenoWrapper(pouchDb: PouchDB.Static): void {
   adapterIdb.use_prefix = false;
 
   function idb(
-    this: any,
+    //this: any,
     opts: PouchDB.IdbAdapter.IdbAdapterConfiguration,
     callback: any,
   ) {
-    console.log("ARGS", arguments);
-    console.log("THIS", this);
-    console.log("OPTS", opts);
-    console.log("CALLBACK", callback);
     if (!hasIndexedDB) {
       // Check for system path
       if (opts && typeof opts.systemPath === "string") {
