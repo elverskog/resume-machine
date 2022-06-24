@@ -72,8 +72,13 @@ export const data: Data<Store, Store> = {
   delete: async (req) => {
     const { id } = await req.json();
     if (id) {
-      store.todos = store.todos.filter((todo) => todo.id !== id);
-      window.localStorage?.setItem("todos", JSON.stringify(store.todos));
+      db.get(id).then(function(doc: Resume) {
+        return db.remove(doc);
+      }).then(function (result: Store) {
+        // handle result
+      }).catch(function (err: any) {
+        console.log(err);
+      });
     }
     return store;
   },
